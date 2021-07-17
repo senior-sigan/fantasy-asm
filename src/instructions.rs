@@ -83,7 +83,7 @@ fn apply_cmp(mem: &mut Memory, op1: ConstOperand, op2: ConstOperand) {
 
 #[cfg(test)]
 mod tests {
-    use crate::machine::{Machine, run};
+    use crate::machine::{Machine};
     use crate::machine::ConstOperand::*;
     use crate::machine::MutOperand::MutRegister;
     use crate::machine::Register::*;

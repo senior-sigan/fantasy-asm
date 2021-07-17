@@ -38,13 +38,43 @@ pub enum Register {
 pub enum ConstOperand {
     ConstRegister(Register),
     Literal(i32),
-    ConstAddress(i32),
+    ConstAddress(usize),
 }
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 pub enum MutOperand {
     MutRegister(Register),
-    MutAddress(i32),
+    MutAddress(usize),
+}
+
+impl From<Register> for ConstOperand {
+    fn from(register: Register) -> Self {
+        ConstRegister(register)
+    }
+}
+
+impl From<i32> for ConstOperand {
+    fn from(value: i32) -> Self {
+        Literal(value)
+    }
+}
+
+impl From<usize> for ConstOperand {
+    fn from(value: usize) -> Self {
+        ConstAddress(value)
+    }
+}
+
+impl From<Register> for MutOperand {
+    fn from(register: Register) -> Self {
+        MutRegister(register)
+    }
+}
+
+impl From<usize> for MutOperand {
+    fn from(value: usize) -> Self {
+        MutAddress(value)
+    }
 }
 
 impl MutOperand {
@@ -137,16 +167,16 @@ impl Machine {
     pub fn append_all(&mut self, instructions: Vec<Instruction>) {
         self.instructions.extend(instructions);
     }
-}
 
-pub fn run(machine: &mut Machine) {
-    while machine.get(PC) >= 0 && machine.get(PC) < machine.instructions.len() as i32 {
-        let instruction = machine.instructions.get(machine.get(PC) as usize);
-        if instruction.is_none() {
-            return;
+    pub fn run(&mut self) {
+        while self.get(PC) >= 0 && self.get(PC) < self.instructions.len() as i32 {
+            let instruction = self.instructions.get(self.get(PC) as usize);
+            if instruction.is_none() {
+                return;
+            }
+            exec(*instruction.unwrap(), &mut self.memory);
+            self.set(PC, self.get(PC) + 1);
         }
-        exec(*instruction.unwrap(), &mut machine.memory);
-        machine.set(PC, machine.get(PC) + 1);
     }
 }
 
@@ -160,15 +190,15 @@ mod tests {
     fn test_fib() {
         let mut machine = Machine::new();
         machine.append_all(Vec::from([
-            MOV(MutRegister(R0), Literal(5)),
-            MOV(MutRegister(R1), Literal(1)),
-            MUL(MutRegister(R1), ConstRegister(R0)),
-            ADD(MutRegister(R0), Literal(-1)),
-            CMP(ConstRegister(R0), Literal(0)),
+            MOV(R0.into(), 5.into()),
+            MOV(R1.into(), 1.into()),
+            MUL(R1.into(), R0.into()),
+            ADD(R0.into(), Literal(-1)),
+            CMP(R0.into(), 0.into()),
             JG(Literal(-4)),
         ]));
 
-        run(&mut machine);
+        machine.run();
 
         assert_eq!(machine.get(R0), 0);
         assert_eq!(machine.get(R1), 1 * 2 * 3 * 4 * 5);
