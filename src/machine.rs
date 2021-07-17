@@ -29,7 +29,7 @@ pub enum Register {
     LR,
     // program counter. It is incremented for each instruction.
     PC,
-    // current program status register
+    // current program status register 1 if >, 0 if =, -1 if <
     CPSR,
 }
 
@@ -134,10 +134,43 @@ impl Machine {
     pub fn append(&mut self, instruction: Instruction) {
         self.instructions.push(instruction)
     }
+    pub fn append_all(&mut self, instructions: Vec<Instruction>) {
+        self.instructions.extend(instructions);
+    }
 }
 
 pub fn run(machine: &mut Machine) {
-    for instruction in machine.instructions.iter() {
-        exec(*instruction, &mut machine.memory)
+    while machine.get(PC) >= 0 && machine.get(PC) < machine.instructions.len() as i32 {
+        let instruction = machine.instructions.get(machine.get(PC) as usize);
+        if instruction.is_none() {
+            return;
+        }
+        exec(*instruction.unwrap(), &mut machine.memory);
+        machine.set(PC, machine.get(PC) + 1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::instructions::Instruction::{ADD, CMP, JE, JG, MOV, MUL};
+
+    use super::*;
+
+    #[test]
+    fn test_fib() {
+        let mut machine = Machine::new();
+        machine.append_all(Vec::from([
+            MOV(MutRegister(R0), Literal(5)),
+            MOV(MutRegister(R1), Literal(1)),
+            MUL(MutRegister(R1), ConstRegister(R0)),
+            ADD(MutRegister(R0), Literal(-1)),
+            CMP(ConstRegister(R0), Literal(0)),
+            JG(Literal(-4)),
+        ]));
+
+        run(&mut machine);
+
+        assert_eq!(machine.get(R0), 0);
+        assert_eq!(machine.get(R1), 1 * 2 * 3 * 4 * 5);
     }
 }
