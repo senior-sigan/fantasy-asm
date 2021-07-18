@@ -2,7 +2,7 @@ use crate::instructions::Instruction::*;
 use crate::machine::ConstOperand;
 use crate::machine::Memory;
 use crate::machine::MutOperand;
-use crate::machine::Register::{CPSR, PC};
+use crate::machine::Register::{CPSR, PC, SL, SP};
 
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 pub enum Instruction {
@@ -14,6 +14,9 @@ pub enum Instruction {
     JG(ConstOperand),
     JE(ConstOperand),
     JL(ConstOperand),
+    PUSH(ConstOperand),
+    POP(MutOperand),
+    // BKPT(), // for debugger
 }
 
 pub fn exec(instruction: Instruction, mem: &mut Memory) {
@@ -26,7 +29,30 @@ pub fn exec(instruction: Instruction, mem: &mut Memory) {
         JG(op1) => apply_jmp_greater(mem, op1),
         JE(op1) => apply_jmp_less(mem, op1),
         JL(op1) => apply_jmp_equal(mem, op1),
+        PUSH(op1) => apply_push(mem, op1),
+        POP(op1) => apply_pop(mem, op1),
     };
+}
+
+fn apply_push(mem: &mut Memory, op1: ConstOperand) {
+    let sp = mem.get_reg(SP) + 1;
+    if sp < 0 || sp >= mem.get_reg(SL) {
+        // TODO: put the error to an error_bus
+        return;
+    }
+    mem.stack_put(sp, mem.get_op(op1));
+    mem.set_reg(SP, sp);
+}
+
+fn apply_pop(mem: &mut Memory, op1: MutOperand) {
+    let sp = mem.get_reg(SP);
+    if sp < 0 || sp >= mem.get_reg(SL) {
+        // TODO: put the error to an error_bus
+        return;
+    }
+    let value = mem.stack_load(sp);
+    mem.set_op(op1, value);
+    mem.set_reg(SP, sp - 1);
 }
 
 fn apply_jmp_less(mem: &mut Memory, op1: ConstOperand) {
@@ -83,8 +109,8 @@ fn apply_cmp(mem: &mut Memory, op1: ConstOperand, op2: ConstOperand) {
 
 #[cfg(test)]
 mod tests {
-    use crate::machine::{Machine};
     use crate::machine::ConstOperand::*;
+    use crate::machine::Machine;
     use crate::machine::MutOperand::MutRegister;
     use crate::machine::Register::*;
 
@@ -172,5 +198,27 @@ mod tests {
         mem.set_reg(CPSR, 1);
         exec(instruction, &mut mem);
         assert_eq!(mem.get_reg(PC), 1 + 13);
+    }
+
+    #[test]
+    fn test_push() {
+        let mut mem = Memory::new();
+        let instruction = PUSH(42.into());
+
+        assert_eq!(mem.get_reg(SP), -1);
+        exec(instruction, &mut mem);
+        assert_eq!(mem.get_reg(SP), 0);
+        assert_eq!(mem.stack_load(0), 42);
+    }
+
+    #[test]
+    fn test_pop() {
+        let mut mem = Memory::new();
+        let instruction = POP(42.into());
+
+        assert_eq!(mem.get_reg(SP), -1);
+        exec(instruction, &mut mem);
+        assert_eq!(mem.get_reg(SP), 0);
+        assert_eq!(mem.stack_load(0), 42);
     }
 }

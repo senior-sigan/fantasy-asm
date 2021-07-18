@@ -88,10 +88,12 @@ impl MutOperand {
 
 pub struct Memory {
     registers: HashMap<Register, i32>,
+    stack: Vec<i32>,
+    heap: Vec<i32>,
 }
 
 impl Memory {
-    pub(crate) fn get_op(&self, operand: ConstOperand) -> i32 {
+    pub fn get_op(&self, operand: ConstOperand) -> i32 {
         match operand {
             ConstRegister(reg) => *self.registers.get(&reg).unwrap(),
             Literal(value) => value,
@@ -99,22 +101,32 @@ impl Memory {
         }
     }
 
-    pub(crate) fn set_op(&mut self, operand: MutOperand, value: i32) {
+    pub fn set_op(&mut self, operand: MutOperand, value: i32) {
         match operand {
             MutRegister(reg) => self.registers.insert(reg, value),
             MutAddress(_) => todo!("Implement heap write"),
         };
     }
 
-    pub(crate) fn get_reg(&self, reg: Register) -> i32 {
+    pub fn get_reg(&self, reg: Register) -> i32 {
         *self.registers.get(&reg).unwrap()
     }
 
-    pub(crate) fn set_reg(&mut self, reg: Register, value: i32) {
+    pub fn set_reg(&mut self, reg: Register, value: i32) {
         self.registers.insert(reg, value);
     }
 
+    pub fn stack_put(&mut self, pointer: i32, value: i32) {
+        self.stack[pointer as usize] = value;
+    }
+
+    pub fn stack_load(&mut self, pointer: i32) -> i32 {
+        self.stack[pointer as usize]
+    }
+
     pub fn new() -> Memory {
+        const STACK_SIZE: usize = 1024;
+        const HEAP_SIZE: usize = 4096;
         Memory {
             registers: [
                 (R0, 0),
@@ -128,9 +140,9 @@ impl Memory {
                 (R8, 0),
                 (R8, 0),
                 (SB, 0),
-                (SL, 0),
+                (SL, STACK_SIZE as i32),
                 (IP, 0),
-                (SP, 0),
+                (SP, -1),
                 (LR, 0),
                 (PC, 0),
                 (CPSR, 0),
@@ -138,6 +150,8 @@ impl Memory {
                 .iter()
                 .cloned()
                 .collect(),
+            stack: vec![0; STACK_SIZE],
+            heap: vec![0; HEAP_SIZE],
         }
     }
 }
