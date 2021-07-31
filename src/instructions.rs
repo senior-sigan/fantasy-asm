@@ -214,11 +214,12 @@ mod tests {
     #[test]
     fn test_pop() {
         let mut mem = Memory::new();
-        let instruction = POP(42.into());
+        let instruction = POP(R0.into());
+        mem.stack_put(0, 42);
+        mem.set_reg(SP, 0);
 
-        assert_eq!(mem.get_reg(SP), -1);
         exec(instruction, &mut mem);
-        assert_eq!(mem.get_reg(SP), 0);
-        assert_eq!(mem.stack_load(0), 42);
+        assert_eq!(mem.get_reg(SP), -1);
+        assert_eq!(mem.get_reg(R0), 42);
     }
 }

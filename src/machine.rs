@@ -183,14 +183,17 @@ impl Machine {
     }
 
     pub fn run(&mut self) {
-        while self.get(PC) >= 0 && self.get(PC) < self.instructions.len() as i32 {
-            let instruction = self.instructions.get(self.get(PC) as usize);
-            if instruction.is_none() {
-                return;
-            }
-            exec(*instruction.unwrap(), &mut self.memory);
-            self.set(PC, self.get(PC) + 1);
+        while self.step() {}
+    }
+
+    pub fn step(&mut self) -> bool {
+        let instruction = self.instructions.get(self.get(PC) as usize);
+        if instruction.is_none() {
+            return false;
         }
+        exec(*instruction.unwrap(), &mut self.memory);
+        self.set(PC, self.get(PC) + 1);
+        return true;
     }
 }
 
